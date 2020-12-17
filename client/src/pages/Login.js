@@ -1,48 +1,39 @@
 import React, { useState } from "react";
 import { useHistory, Link } from "react-router-dom";
 import { Row, Col, Form, Button } from "react-bootstrap";
-import { gql, useMutation } from "@apollo/client";
+import { gql, useLazyQuery } from "@apollo/client";
 
 // Query
-const REGISTER_USER = gql`
-  mutation register(
-    $username: String!
-    $email: String!
-    $password: String!
-    $confirmPassword: String!
-  ) {
-    register(
-      username: $username
-      email: $email
-      password: $password
-      confirmPassword: $confirmPassword
-    ) {
+const LOGIN_USER = gql`
+  query login($username: String!, $password: String!) {
+    login(username: $username, password: $password) {
       username
       email
       createdAt
+      token
     }
   }
 `;
 
-const Register = () => {
+const Login = () => {
   const history = useHistory();
 
   const [userInput, setUserInput] = useState({
-    email: "",
     username: "",
     password: "",
-    confirmPassword: "",
   });
   const [errors, setErrors] = useState({});
 
-  // useMutation
-  const [registerUser, { loading }] = useMutation(REGISTER_USER, {
-    update: (_, result) => {
-      console.log(result);
+  // useLazyQuery -> execute the query once hitting Submit button
+  // store token in localStorage
+  const [loginUser, { loading }] = useLazyQuery(LOGIN_USER, {
+    onCompleted: (data) => {
+      console.log(data);
+      localStorage.setItem("token", data.login.token);
       history.push("/");
     },
     onError: (err) => {
-      console.log(err.graphQLErrors[0].extensions.errors);
+      // console.log(err.graphQLErrors[0].extensions.errors);
       setErrors(err.graphQLErrors[0].extensions.errors);
     },
   });
@@ -51,29 +42,17 @@ const Register = () => {
     setUserInput({ ...userInput, [e.target.name]: e.target.value });
   };
 
-  const handleRegister = (e) => {
+  const handleLogin = (e) => {
     e.preventDefault();
 
-    registerUser({ variables: userInput });
+    loginUser({ variables: userInput });
   };
 
   return (
     <Row className='bg-white py-5 justify-content-center'>
       <Col sm={8} md={6} lg={4}>
-        <h1 className='text-center'>Register</h1>
-        <Form onSubmit={handleRegister}>
-          <Form.Group>
-            <Form.Label className={errors.email && "text-danger"}>
-              {errors.email ?? "Email address"}
-            </Form.Label>
-            <Form.Control
-              className={errors.email && "is-invalid"}
-              name='email'
-              value={userInput.email}
-              onChange={handleChange}
-            />
-          </Form.Group>
-
+        <h1 className='text-center'>Login</h1>
+        <Form onSubmit={handleLogin}>
           <Form.Group>
             <Form.Label className={errors.username && "text-danger"}>
               {errors.username ?? "Username"}
@@ -100,26 +79,13 @@ const Register = () => {
             />
           </Form.Group>
 
-          <Form.Group>
-            <Form.Label className={errors.confirmPassword && "text-danger"}>
-              {errors.confirmPassword ?? "Confirm Password"}
-            </Form.Label>
-            <Form.Control
-              className={errors.confirmPassword && "is-invalid"}
-              type='password'
-              name='confirmPassword'
-              value={userInput.confirmPassword}
-              onChange={handleChange}
-            />
-          </Form.Group>
-
           <div className='text-center'>
             <Button variant='success' type='submit' disabled={loading}>
-              {loading ? "Loading..." : "Register"}
+              {loading ? "Loading..." : "Login"}
             </Button>
             <div>
               <small>
-                Already have an account? <Link to='/login'>Login</Link>
+                Don't have an account? <Link to='/register'>Register</Link>
               </small>
             </div>
           </div>
@@ -129,4 +95,4 @@ const Register = () => {
   );
 };
 
-export default Register;
+export default Login;
